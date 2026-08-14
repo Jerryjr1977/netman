@@ -1,0 +1,51 @@
+Here is a comprehensive summary of the NetMan project files, organized by their functional role within the application. You can copy and paste this into a future conversation to quickly restore context.
+
+### **NetMan Project: Modular Penetration Testing Suite**
+
+**Project Overview:** NetMan is a multi-functional security testing platform built with Python and Tkinter. It follows a modular architecture where frontend "GUI" files manage user interaction and backend "Engine" files handle multi-threaded network operations and logic.
+
+---
+
+### **1. Core Application & State Management**
+* **`gui_test.py`**: The central orchestrator of the application. It initializes the main Tkinter window, constructs the primary Notebook (tabbed interface), and manages global features like right-click "Send to..." context menus, project loading/saving, and thread-safe UI updates.
+* **`project_engine.py`**: Handles the atomic saving and loading of project state files (`.nman`), ensuring that scope settings and history are preserved between sessions.
+* **`logger_engine.py`**: Manages the local HTTP history log (`http_history.log`), providing safe methods to read, append, and clear captured traffic.
+
+### **2. Proxy & Interception Core**
+* **`mitm_proxy.py`**: A robust Man-in-the-Middle proxy server. It intercepts HTTP/HTTPS and WebSocket traffic, performs dynamic SSL certificate forgery for decryption, and routes data to the GUI or analysis engines.
+* **`interceptor_engine.py`**: Uses threading events to pause the proxy, allowing users to manually inspect, edit, or drop requests before they are sent to the target server.
+* **`http_utils.py`**: A deep utility library for parsing raw HTTP messages. It handles header normalization, body de-chunking, and decompression of common encodings like Gzip, Brotli, and Zstd.
+* **`websocket_utils.py`**: Specialized tools for the MITM proxy to identify WebSocket upgrades and handle real-time message interception and modification.
+* **`browser.py`**: A standalone script to launch Mozilla Firefox with a dedicated "NetMan" profile to isolate testing traffic from regular browsing.
+
+### **3. Attack & Manipulation Engines**
+* **`intruder_engine.py`**: A high-performance fuzzer that supports Sniper, Pitchfork, and Cluster Bomb attack patterns. It handles dynamic payload processing (encoding/hashing) and regex-based macro token extraction for session maintenance.
+* **`repeater_engine.py`**: The engine for manually re-sending and manipulating raw HTTP requests. It automatically recalculates `Content-Length` and `Connection` headers to ensure valid traffic.
+* **`auth_engine.py` / `auth_gui.py`**: Scans for authentication vulnerabilities, including Basic Auth brute-forcing, missing cookie security flags (Secure, HttpOnly), JWT issues, and CSRF protection gaps.
+* **`api_engine.py` / `api_gui.py`**: Discovers backend API architecture by probing for GraphQL introspection, OpenAPI/Swagger documentation, and RESTful endpoint patterns.
+* **`xss_engine.py` / `xss_gui.py`**: Dedicated Cross-Site Scripting (XSS) scanner that generates mutated payloads and uses a unique "tracker" string to verify successful reflections in HTML.
+* **`idor_engine.py` / `idor_gui.py`**: Automates testing for Insecure Direct Object References by iterating through numeric ID ranges while maintaining an authenticated session.
+* **`jwt_engine.py` / `jwt_gui.py`**: A suite for decoding, modifying JSON claims, and re-forging JWT tokens for signature bypass testing.
+* **`compliance_engine.py` / `compliance_gui.py`**: Executes targeted OWASP-style probes for common flaws like SQL injection, sensitive file exposure (`.env`, `.git`), and security header misconfigurations.
+
+### **4. Reconnaissance & Discovery**
+* **`crawler_engine.py` / `crawler_gui.py`**: A multi-page web spider that maps out an application's link structure and identifies valid URL paths.
+* **`discovery_engine.py` / `discovery_gui.py`**: A directory brute-forcer that uses thread pools and a "baseline" filter to ignore false-positive 200 OK responses on "catch-all" servers.
+* **`subdomain_engine.py` / `subdomain_gui.py`**: Enumerates subdomains for a target domain using both built-in and custom wordlists to expand the attack surface.
+* **`tech_engine.py` / `tech_gui.py`**: Fingerprints server-side technologies, CMS platforms (WordPress, Drupal), and backend frameworks by analyzing headers and HTML markers.
+* **`ssl_engine.py` / `ssl_gui.py`**: Analyzes the target's TLS/SSL configuration for expired certificates, weak cipher suites, and deprecated protocol support.
+* **`scraper_engine.py` / `scraper_gui.py`**: Targeted extraction tool for pulling emails, API keys, hidden input fields, and JavaScript source links from pages.
+* **`scanner_engine.py`**: A multi-threaded network port scanner for identifying open services on a target IP or domain.
+
+### **5. Analysis & Reporting**
+* **`ai_engine.py` / `ai_gui.py`**: Integrates large language models (Gemini, Claude, GPT-4o) as an on-board "Co-Pilot" to provide real-time vulnerability analysis and remediation advice.
+* **`skimmer_engine.py`**: A passive analysis engine that uses regex to scan all proxy and intruder traffic for sensitive information (passwords, emails, keys).
+* **`vuln_engine.py` / `vuln_gui.py`**: Analyzes lockfiles (like `package-lock.json`) to identify vulnerable dependencies by querying the Google OSV database.
+* **`reporter_engine.py`**: Aggregates findings from the proxy, skimmer, and AI to generate professional Markdown-formatted security reports.
+* **`decoder_engine.py`**: Provides manual encoding and decoding for various formats, including Base64, Base85 (Z85), URL, and HTML entities.
+
+### **6. Utility Scripts & Payloads**
+* **`payload.py`**: A Python-based C2 beacon for post-exploitation. It fingerprints the system, exfiltrates environment variables, and executes remote tasks via the NetMan proxy listener.
+* **`cracker_engine.py`**: A standalone MD5 hash cracker that uses local wordlists to identify plaintext passwords.
+* **`generate_mfa.py` / `generate_payloads.py`**: Scripting utilities used to generate custom brute-force lists and encoded payloads for the Intruder module.
+* **`ws_engine.py` / `ws_gui.py`**: Dedicated tools for connecting to and interacting with standalone WebSockets outside of the proxy flow.

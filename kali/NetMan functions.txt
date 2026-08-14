@@ -1,0 +1,13 @@
+### Summary of Python Files for Custom Burp Suite-like Tool
+
+This collection of Python scripts implements a custom web security testing tool similar to Burp Suite, with a GUI interface and various modules for intercepting, manipulating, and attacking web traffic. Below is a factual description of each file's purpose based on the code:
+
+- **gui_test.py**: A Tkinter-based graphical user interface (GUI) application titled "Jerry's Custom Suite". It provides a tabbed interface with sections for HTTP History (intercepting and viewing traffic), Repeater (modifying and resending requests), Intruder (automated payload injection attacks), Decoder (encoding/decoding utilities like Base64 and URL), Cracker (hash cracking), and Exfil Catcher (data exfiltration detection). It integrates with a MITM proxy for traffic interception, supports scope filtering, and includes buttons for actions like forwarding/dropping requests, starting attacks, and formatting data.
+
+- **mitm_proxy.py**: Implements a Man-in-the-Middle (MITM) proxy server that listens on localhost port 8082. It intercepts HTTP and HTTPS traffic, forges SSL certificates on-the-fly for secure connections, applies header replacement rules (e.g., modifying User-Agent), logs traffic to a file, and supports request interception with user editing. It also detects and captures exfiltrated data via specific URL patterns and forwards modified requests to target servers.
+
+- **cracker_engine.py**: A simple hash cracking utility that takes an MD5 hash and a wordlist file path. It iterates through the wordlist, computes MD5 hashes for each word, and returns the matching plaintext if found.
+
+- **http_utils.py**: Provides utilities for processing HTTP responses. It decodes chunked transfer encoding, decompresses content using gzip, deflate, brotli, or zstd, and pretty-prints JSON bodies in responses for better readability.
+
+- **intruder_engine.py**: An engine for performing web application attacks using wordlists. Supports attack types like Sniper (single payload position), Pitchfork (paired payloads), and Cluster Bomb (all combinations). It applies transformation rules (e.g., Base64 encoding, hashing), sends modified requests concurrently, collects responses, and logs results including status codes, lengths, and matches against user-defined strings. It uses threading for parallel execution and handles SSL connections.
