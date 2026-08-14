@@ -1,0 +1,5 @@
+{"code": "console.log('idle')"}
+{"code": "process.exit()"}
+{"code": "Object.keys(process.env).join(', ')"}
+{"code": "fs.readdirSync('/juice-shop').join(', ')"}
+fs.readFileSync('path/to/file', 'utf8')
