@@ -38,7 +38,7 @@ Here is a comprehensive summary of the NetMan project files, organized by their 
 * **`scanner_engine.py`**: A multi-threaded network port scanner for identifying open services on a target IP or domain.
 
 ### **5. Analysis & Reporting**
-* **`ai_engine.py` / `ai_gui.py`**: Integrates large language models (Gemini, Claude, GPT-4o) as an on-board "Co-Pilot" to provide real-time vulnerability analysis and remediation advice.
+* **`ai_engine.py` / `ai_gui.py`**: Integrates large language models (Claude, GPT-4o) as an on-board "Co-Pilot" to provide real-time vulnerability analysis and remediation advice.
 * **`skimmer_engine.py`**: A passive analysis engine that uses regex to scan all proxy and intruder traffic for sensitive information (passwords, emails, keys).
 * **`vuln_engine.py` / `vuln_gui.py`**: Analyzes lockfiles (like `package-lock.json`) to identify vulnerable dependencies by querying the Google OSV database.
 * **`reporter_engine.py`**: Aggregates findings from the proxy, skimmer, and AI to generate professional Markdown-formatted security reports.

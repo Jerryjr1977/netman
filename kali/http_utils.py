@@ -2,13 +2,21 @@
 import re
 import gzip
 import zlib
-import brotli
-import zstandard
 import json
 import logging
 import base64
 from typing import Dict, List, Optional, Tuple, Union, Any
 from urllib.parse import urlparse, parse_qs, urlencode
+
+try:
+    import brotli
+except ImportError:  # pragma: no cover - optional dependency
+    brotli = None
+
+try:
+    import zstandard
+except ImportError:  # pragma: no cover - optional dependency
+    zstandard = None
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -45,12 +53,18 @@ def _decompress_body(body_bytes: bytes, encoding: str) -> bytes:
             logger.warning(f"Deflate decompression failed: {e}")
             raise
     elif encoding == "br":
+        if brotli is None:
+            logger.warning("Brotli support is unavailable because the 'brotli' package is not installed.")
+            return body_bytes
         try:
             return brotli.decompress(body_bytes)
         except Exception as e:
             logger.warning(f"Brotli decompression failed: {e}")
             raise
     elif encoding == "zstd":
+        if zstandard is None:
+            logger.warning("Zstandard support is unavailable because the 'zstandard' package is not installed.")
+            return body_bytes
         try:
             dctx = zstandard.ZstdDecompressor()
             return dctx.decompress(body_bytes)

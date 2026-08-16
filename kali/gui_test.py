@@ -45,6 +45,7 @@ import auth_gui
 import compliance_gui
 from local_bridge import LocalBridge
 import pcap_engine
+import psutil
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 history_file_path = os.path.join(current_dir, "http_history.log")
@@ -732,6 +733,68 @@ app.resizable(True, True)
 main_menu = tk.Menu(app)
 app.config(menu=main_menu)
 
+# --- Resource monitor bar (CPU / RAM / Network) ---
+_net_last = psutil.net_io_counters()
+_net_last_time = [0.0]
+
+resmon_frame = tk.Frame(app, bg="#1a1a1a", pady=2)
+resmon_frame.pack(fill="x", side="top")
+
+tk.Label(resmon_frame, text="CPU:", bg="#1a1a1a", fg="#aaaaaa", font=("Consolas", 9)).pack(side="left", padx=(8, 0))
+cpu_label = tk.Label(resmon_frame, text="--%", bg="#1a1a1a", fg="#00e676", font=("Consolas", 9, "bold"), width=6)
+cpu_label.pack(side="left", padx=(0, 10))
+
+tk.Label(resmon_frame, text="RAM:", bg="#1a1a1a", fg="#aaaaaa", font=("Consolas", 9)).pack(side="left")
+ram_label = tk.Label(resmon_frame, text="--%", bg="#1a1a1a", fg="#40c4ff", font=("Consolas", 9, "bold"), width=6)
+ram_label.pack(side="left", padx=(0, 10))
+
+tk.Label(resmon_frame, text="NET ↑:", bg="#1a1a1a", fg="#aaaaaa", font=("Consolas", 9)).pack(side="left")
+net_up_label = tk.Label(resmon_frame, text="-- KB/s", bg="#1a1a1a", fg="#ff6d00", font=("Consolas", 9, "bold"), width=10)
+net_up_label.pack(side="left", padx=(0, 4))
+
+tk.Label(resmon_frame, text="↓:", bg="#1a1a1a", fg="#aaaaaa", font=("Consolas", 9)).pack(side="left")
+net_down_label = tk.Label(resmon_frame, text="-- KB/s", bg="#1a1a1a", fg="#ff6d00", font=("Consolas", 9, "bold"), width=10)
+net_down_label.pack(side="left", padx=(0, 10))
+
+def _fmt_rate(bps):
+    if bps >= 1_000_000:
+        return f"{bps/1_000_000:.1f} MB/s"
+    return f"{bps/1_000:.0f} KB/s"
+
+def _color_cpu(pct):
+    if pct >= 85:
+        return "#ff1744"
+    if pct >= 60:
+        return "#ffab00"
+    return "#00e676"
+
+def _color_ram(pct):
+    if pct >= 85:
+        return "#ff1744"
+    if pct >= 70:
+        return "#ffab00"
+    return "#40c4ff"
+
+def _update_resmon():
+    global _net_last, _net_last_time
+    import time
+    now = time.monotonic()
+    cpu = psutil.cpu_percent()
+    ram = psutil.virtual_memory().percent
+    net = psutil.net_io_counters()
+    elapsed = now - _net_last_time[0] if _net_last_time[0] else 1.0
+    up_rate = (net.bytes_sent - _net_last.bytes_sent) / max(elapsed, 0.1)
+    dn_rate = (net.bytes_recv - _net_last.bytes_recv) / max(elapsed, 0.1)
+    _net_last = net
+    _net_last_time[0] = now
+    cpu_label.config(text=f"{cpu:.0f}%", fg=_color_cpu(cpu))
+    ram_label.config(text=f"{ram:.0f}%", fg=_color_ram(ram))
+    net_up_label.config(text=_fmt_rate(up_rate))
+    net_down_label.config(text=_fmt_rate(dn_rate))
+    app.after(1500, _update_resmon)
+
+app.after(500, _update_resmon)
+
 file_menu = tk.Menu(main_menu, tearoff=0)
 main_menu.add_cascade(label="Project", menu=file_menu)
 file_menu.add_command(label="New Project", command=new_project_trigger)
@@ -1078,6 +1141,12 @@ def open_payload_generator(target_entry, list_id):
     tk.Button(gen_win, text="Generate & Apply", bg="green", fg="white", command=run_gen).pack(pady=20)
 
 def start_intruder_attack():
+    if intruder_attack_btn.cget('text') == 'Stop Attack':
+        intruder_engine.stop_attack()
+        intruder_attack_btn.config(text="Start Attack", bg="darkred")
+        progress_var.set(0)
+        return
+
     for item in intruder_results.get_children():
         intruder_results.delete(item)
         intruder_response_db.clear()
@@ -1101,12 +1170,18 @@ def start_intruder_attack():
     macro_req_val = intruder_macro_req.get("1.0", tk.END).strip()
     macro_reg_val = intruder_macro_reg.get().strip()
     progress_var.set(0)
-    
-    attack_thread = threading.Thread(
-    target=intruder_engine.run_attack_loop,
-    args=(host, port, template, attack_type, wordlist_path, wordlist2_path, match_str, progress_var, rule1, rule2, delay_ms, macro_req_val, macro_reg_val, target_threads),
-        daemon=True
+
+    intruder_attack_btn.config(text="Stop Attack", bg="#b22222")
+
+    def _run():
+        intruder_engine.run_attack_loop(
+            host, port, template, attack_type, wordlist_path, wordlist2_path,
+            match_str, progress_var, rule1, rule2, delay_ms,
+            macro_req_val, macro_reg_val, target_threads
         )
+        app.after(0, lambda: intruder_attack_btn.config(text="Start Attack", bg="darkred"))
+
+    attack_thread = threading.Thread(target=_run, daemon=True)
     attack_thread.start()
 
 def view_intruder_response(event):

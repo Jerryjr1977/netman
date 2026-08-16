@@ -13,12 +13,17 @@ import html
 import queue
 import json
 import logging
+import threading
 import skimmer_engine
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 result_queue = queue.Queue()
+stop_event = threading.Event()
+
+def stop_attack():
+    stop_event.set()
 
 def create_ssl_context():
     """Factory for SSL context creation with consistent settings."""
@@ -132,6 +137,7 @@ def run_attack_loop(host, port, template, attack_type, wordlist_path, wordlist2_
         logger.error(f"Could not load wordlist: {e}")
         result_queue.put(("ERROR", "Wordlist Load Failed", 0, 0, "N/A", "N/A", str(e), "N/A"))
         return
+    stop_event.clear()
     logger.info(f"Starting {attack_type} attack with {max_threads} threads...")
     futures = []
     
@@ -141,6 +147,8 @@ def run_attack_loop(host, port, template, attack_type, wordlist_path, wordlist2_
                 logger.error("Sniper requires a ^1^ marker in template")
                 return
             for word in words1:
+                if stop_event.is_set():
+                    break
                 processed_word = process_payload_pipeline(word, rule1)
                 attack_request = template.replace("^1^", processed_word)
                 if delay_ms > 0:
@@ -152,6 +160,8 @@ def run_attack_loop(host, port, template, attack_type, wordlist_path, wordlist2_
                 logger.error("Pitchfork requires ^1^ and ^2^ markers in template")
                 return
             for w1, w2 in zip(words1, words2):
+                if stop_event.is_set():
+                    break
                 processed_w1 = process_payload_pipeline(w1, rule1)
                 processed_w2 = process_payload_pipeline(w2, rule2)
                 attack_request = template.replace("^1^", processed_w1).replace("^2^", processed_w2)
@@ -165,8 +175,12 @@ def run_attack_loop(host, port, template, attack_type, wordlist_path, wordlist2_
                 logger.error("Cluster Bomb requires ^1^ and ^2^ markers in template")
                 return
             for w1 in words1:
+                if stop_event.is_set():
+                    break
                 processed_w1 = process_payload_pipeline(w1, rule1)
                 for w2 in words2:
+                    if stop_event.is_set():
+                        break
                     processed_w2 = process_payload_pipeline(w2, rule2)
                     attack_request = template.replace("^1^", processed_w1).replace("^2^", processed_w2)
                     combined_payload_name = f"{processed_w1} : {processed_w2}"
@@ -179,7 +193,12 @@ def run_attack_loop(host, port, template, attack_type, wordlist_path, wordlist2_
             completed += 1
             if progress_var:
                 progress_var.set((completed / total_tasks) * 100)
-        logger.info(f"Intruder attack complete: {total_tasks} payloads sent")
+            if stop_event.is_set():
+                for f in futures:
+                    f.cancel()
+                break
+        stopped = stop_event.is_set()
+        logger.info(f"Intruder attack {'stopped by user' if stopped else 'complete'}: {total_tasks} payloads sent")
 
 def fire_payload(host, port, attack_request, table_label, match_str, macro_req="", macro_reg=""):
     if macro_req != "" and macro_reg != "":

@@ -66,15 +66,19 @@ def build_ai_tab(notebook):
     
     tk.Label(control_frame, text="Active AI Model:", font=("Arial", 10, "bold")).pack(side=tk.LEFT)
     
-    model_var = tk.StringVar(value="gemini-2.5-flash")
+    default_model = ai_engine.active_model if ai_engine.active_model in {"claude-3-5-sonnet-20241022", "gpt-4o"} else "claude-3-5-sonnet-20241022"
+
+    model_var = tk.StringVar(value=default_model)
     model_dropdown = ttk.Combobox(control_frame, textvariable=model_var, state="readonly", width=30)
-    model_dropdown['values'] = ("gemini-2.5-flash", "gemini-2.5-pro", "claude-3-5-sonnet-20241022", "gpt-4o")
+    model_values = ["claude-3-5-sonnet-20241022", "gpt-4o"]
+    model_dropdown['values'] = tuple(model_values)
     model_dropdown.pack(side=tk.LEFT, padx=10)
     
     # Bind the dropdown so it triggers our function when clicked
     model_dropdown.bind("<<ComboboxSelected>>", on_model_change)
     
-    info_label = tk.Label(control_frame, text="(Auto-fallback chain: Gemini → Claude → GPT-4o)", font=("Arial", 9, "italic"), fg="gray")
+    info_label_text = "(Auto-fallback chain: Claude → GPT-4o)"
+    info_label = tk.Label(control_frame, text=info_label_text, font=("Arial", 9, "italic"), fg="gray")
     info_label.pack(side=tk.LEFT, padx=5)
 
     # --- Main Text Display Area ---

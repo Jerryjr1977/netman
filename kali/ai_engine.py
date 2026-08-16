@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import queue
 import threading
 import time
-from google import genai
+
 try:
     from anthropic import Anthropic
 except ImportError:
@@ -19,32 +19,22 @@ result_queue = queue.Queue()
 
 # Load environment variables (file read, but fast)
 load_dotenv()
-gemini_api_key = os.getenv("GEMINI_API_KEY")
+
 anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # AI clients — initialized lazily on first use to avoid blocking startup
-ai_client = None
 claude_client = None
 openai_client = None
-chat_session = None
-active_model = "gemini-2.5-flash"
+active_model = "claude-3-5-sonnet-20241022" if Anthropic else "gpt-4o"
 _clients_initialized = False
 
 def _ensure_clients():
     """Initialize AI clients on first use instead of at import time."""
-    global ai_client, claude_client, openai_client, chat_session, _clients_initialized
+    global claude_client, openai_client, _clients_initialized
     if _clients_initialized:
         return
     _clients_initialized = True
-
-    try:
-        if gemini_api_key:
-            ai_client = genai.Client(api_key=gemini_api_key)
-            chat_session = ai_client.chats.create(model='gemini-2.5-flash')
-    except Exception as e:
-        print(f"[-] Failed to initialize Gemini Client: {e}")
-        ai_client = None
 
     try:
         if anthropic_api_key and Anthropic:
@@ -60,47 +50,22 @@ def _ensure_clients():
         print(f"[-] Failed to initialize OpenAI Client: {e}")
         openai_client = None
 
-    if not ai_client and not claude_client and not openai_client:
-        print("[-] No AI clients available. Please set GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY in .env")
+    if not claude_client and not openai_client:
+        print("[-] No AI clients available. Please set ANTHROPIC_API_KEY or OPENAI_API_KEY in .env")
 
 # Global set to track reported AI insights
 reported_insights = set()
 
 def fetch_ai_analysis(target, payload):
-    global active_model, chat_session, reported_insights
+    global active_model, reported_insights
     _ensure_clients()
     
-    if not ai_client and not claude_client and not openai_client:
+    if not claude_client and not openai_client:
         result_queue.put(f"[-] AI Error: No clients initialized.\n")
         return
         
     analysis_prompt = f"Analyze this raw HTTP request for security vulnerabilities. Identify SQL injection, XSS, auth bypass, IDOR, insecure deserialization, and other flaws. Keep it brief and actionable. Request:\n\n{payload}"
     
-    # Try Gemini first if it's the active model
-    if ai_client and chat_session and active_model.startswith("gemini"):
-        for attempt in range(3):
-            try:
-                response = chat_session.send_message(analysis_prompt)
-                insight = f"[AI INSIGHT: {target} ({active_model})]\n{response.text}\n{'-'*60}\n\n"
-                if insight not in reported_insights:
-                    result_queue.put(insight)
-                    reported_insights.add(insight)
-                return
-            except Exception as e:
-                if "503" in str(e) or "429" in str(e) or "overloaded" in str(e).lower():
-                    wait = (attempt + 1) * 3
-                    result_queue.put(f"[*] Gemini Overloaded (Attempt {attempt+1}/3). Retrying in {wait}s...\n")
-                    time.sleep(wait)
-                    if attempt == 2:  # Last attempt failed, fallback to Claude
-                        result_queue.put(f"[*] Gemini unresponsive. Switching to Claude for analysis...\n")
-                        active_model = "claude-3-5-sonnet-20241022"
-                        fetch_ai_analysis(target, payload)  # Recursive call
-                        return
-                else:
-                    result_queue.put(f"[-] Gemini API Error: {e}\n")
-                    return
-    
-    # Use Claude if Gemini failed or is active model
     if claude_client and active_model.startswith("claude"):
         for attempt in range(3):
             try:
@@ -153,35 +118,13 @@ def fetch_ai_analysis(target, payload):
         result_queue.put(f"[-] GPT-4o not configured. Set OPENAI_API_KEY in .env\n")
 
 def send_manual_chat(user_text):
-    global active_model, chat_session
+    global active_model
     _ensure_clients()
     
-    if not ai_client and not claude_client and not openai_client:
+    if not claude_client and not openai_client:
         result_queue.put(f"[-] Chat Error: No AI clients configured.\n")
         return
     
-    # Try Gemini first if it's the active model
-    if ai_client and chat_session and active_model.startswith("gemini"):
-        for attempt in range(3):
-            try:
-                response = chat_session.send_message(user_text)
-                result_queue.put(f"[AI CO-PILOT ({active_model})]\n{response.text}\n{'-'*60}\n\n")
-                return
-            except Exception as e:
-                if "503" in str(e) or "429" in str(e) or "overloaded" in str(e).lower():
-                    wait = (attempt + 1) * 3
-                    result_queue.put(f"[*] Gemini Overloaded. Retrying...\n")
-                    time.sleep(wait)
-                    if attempt == 2:
-                        result_queue.put(f"[*] Switching to Claude...\n")
-                        active_model = "claude-3-5-sonnet-20241022"
-                        send_manual_chat(user_text)  # Recursive call
-                        return
-                else:
-                    result_queue.put(f"[-] Gemini Chat Error: {e}\n\n")
-                    return
-    
-    # Use Claude if Gemini failed or is active model
     if claude_client and active_model.startswith("claude"):
         for attempt in range(3):
             try:
@@ -230,7 +173,7 @@ def send_manual_chat(user_text):
 def process_event_loop():
     """This runs continuously, waiting for the user to manually send a payload."""
     
-    global chat_session, active_model
+    global active_model
     _ensure_clients()
     
     while True:
@@ -260,14 +203,7 @@ def process_event_loop():
                 new_model = ai_message.get("model")
                 active_model = new_model
                 
-                # Reinitialize Gemini chat session if switching to Gemini
-                if new_model.startswith("gemini") and ai_client:
-                    try:
-                        chat_session = ai_client.chats.create(model=new_model)
-                        result_queue.put(f"[*] SUCCESS: Switched to {new_model}. Fresh conversation started.\n\n")
-                    except Exception as e:
-                        result_queue.put(f"[-] FAILED to switch to {new_model}: {e}\n\n")
-                elif new_model.startswith("claude") and claude_client:
+                if new_model.startswith("claude") and claude_client:
                     result_queue.put(f"[*] SUCCESS: Switched to {new_model}. Ready for vulnerability analysis.\n\n")
                 elif new_model.startswith("claude") and not claude_client:
                     result_queue.put(f"[-] Claude not available. Set ANTHROPIC_API_KEY in your .env file.\n\n")
