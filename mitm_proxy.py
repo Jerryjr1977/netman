@@ -1,4 +1,6 @@
 #mitm_proxy
+# NetMan - For authorized security testing only.
+# See DISCLAIMER.md in the project root before use.
 import socket
 import threading
 import ssl
