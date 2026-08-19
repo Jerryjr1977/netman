@@ -1,4 +1,6 @@
 #cracker_engine
+# NetMan - For authorized security testing only.
+# See DISCLAIMER.md in the project root before use.
 import hashlib
 
 def crack_md5(target_hash, wordlist_path):
