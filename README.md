@@ -1,4 +1,14 @@
-# NetMan System Architecture Specification
+## ⚠️ Legal Disclaimer
+
+NetMan is a security testing toolkit built for educational purposes and authorized security testing only.
+
+This project includes tools capable of network scanning, traffic interception, automated exploitation, and post-exploitation activity (including a C2 beacon component). These capabilities are intended strictly for use in environments you own, or environments you have **explicit, documented authorization** to test — such as personal lab setups (DVWA, Juice Shop, TryHackMe, HackTheBox), CTF competitions, or bug bounty programs where the scope explicitly permits the techniques used.
+
+**Do not use this tool against any system without prior mutual consent.** Unauthorized access to computer systems is illegal in most jurisdictions, including under the U.S. Computer Fraud and Abuse Act (CFAA) and equivalent laws elsewhere.
+
+The author(s) of this project are not responsible for any misuse of this software or any damages resulting from its use. By using this software, you agree that you are solely responsible for ensuring your activities are legal and authorized.
+
+If you are unsure whether your intended use is authorized, do not proceed.# NetMan System Architecture Specification
 
 **NetMan** is a comprehensive, multi-threaded network security and traffic analysis suite. Built in Python 3.14 using a Tkinter frontend, it isolates a heavy-duty backend engine architecture from a responsive graphical interface using asynchronous polling and thread-safe queues. The system integrates traditional penetration testing tools with a local AI/Agent layer for automated traffic analysis and vulnerability discovery.
 
