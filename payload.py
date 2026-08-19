@@ -1,4 +1,6 @@
 # payload.py
+# NetMan - For authorized security testing only.
+# See DISCLAIMER.md in the project root before use.
 import os
 import platform
 import urllib.request
