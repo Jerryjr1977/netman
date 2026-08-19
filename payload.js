@@ -1,4 +1,20 @@
 //payload
+/**
+ * NetMan - payload.js
+ * 
+ * For authorized security testing only.
+ * 
+ * This script is part of the NetMan security testing toolkit and may include
+ * capabilities for network interaction, exploitation, or post-exploitation
+ * activity. Use only against systems you own or have explicit, documented
+ * authorization to test (personal labs, CTFs, scoped bug bounty programs).
+ * 
+ * Unauthorized use against systems without consent is illegal under laws
+ * such as the U.S. Computer Fraud and Abuse Act (CFAA) and equivalent
+ * legislation elsewhere. The author is not responsible for misuse.
+ * 
+ * See DISCLAIMER.md in the project root for full terms.
+ */
 const os = require("os");
 const http = require("http");
 const fs = require("fs");
